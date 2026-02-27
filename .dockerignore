@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.env.local
+dist
+.turbo
+*.log
+coverage
+.DS_Store
+apps/*/node_modules
+packages/*/node_modules
+apps/*/dist
+packages/*/dist
+
