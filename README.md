@@ -1,84 +1,178 @@
-# Turborepo starter
+# Metaverse Architecture & Monorepo 🌌
 
-This Turborepo starter is maintained by the Turborepo core team.
+![Metaverse Banner](https://img.shields.io/badge/Status-Active-brightgreen)
+![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue?logo=typescript)
+![Turborepo](https://img.shields.io/badge/Turborepo-Monorepo-ef4444?logo=turborepo)
+![React](https://img.shields.io/badge/React-19-61dafb?logo=react)
+![Phaser](https://img.shields.io/badge/Phaser-3-000000?logo=phaser)
+![Redis](https://img.shields.io/badge/Valkey_/_Redis-PubSub-dc382d?logo=redis)
 
-## Using this example
+An advanced, highly-scalable 2D Real-Time Metaverse built with modern web technologies. This repository is configured strictly as a **Turborepo monorepo**, containing dedicated microservices for the frontend client, RESTful backend APIs, and a blazing-fast real-time WebSocket server.
 
-Run the following command:
+---
 
-```sh
-npx create-turbo@latest
+## ✨ Key Features
+
+- **Real-Time Multiplayer Experience:** Powered by **Phaser 3** for deterministic 2D rendering and **WebSockets** for low-latency synchronization of player coordinates and actions.
+- **Infinitely Scalable Architecture:** Built to scale horizontally using **Valkey** (a high-performance Redis alternative) for distributed Pub/Sub state synchronization.
+- **Robust Monorepo Design:** Efficiently managed by **Turborepo** with shared packages for Types, UI components, and JWT authentication across apps.
+- **Type-Safe End-to-End:** 100% TypeScript with strict linting and unified configurations.
+- **Modern Tech Stack:** Utilizes React 19, Vite, Tailwind CSS, Express, Prisma ORM, and Socket.io.
+
+---
+
+## 🏗 System Architecture
+
+The architecture is explicitly designed to handle high concurrency and provide real-time updates across multiple instances safely.
+
+```mermaid
+graph TD
+    Client[Browser Client<br/>React + Phaser + Zustand]
+    
+    subgraph Load Balancer / Ingress
+        LB[Reverse Proxy / NGINX / ALB]
+    end
+
+    subgraph Backend Services
+        API[REST API Service<br/>Express.js]
+        WS1[WebSocket Server 1<br/>Node ws / Socket.io]
+        WS2[WebSocket Server 2<br/>Node ws / Socket.io]
+    end
+
+    subgraph Data & State Layer
+        DB[(PostgreSQL<br/>via Prisma)]
+        Redis[(Valkey / Redis<br/>Pub/Sub & Caching Layer)]
+    end
+
+    %% Client Connections
+    Client -->|HTTP/REST| LB
+    Client -->|WebSocket| LB
+    
+    %% Routing
+    LB -->|/api/*| API
+    LB -->|/ws/*| WS1
+    LB -->|/ws/*| WS2
+
+    %% Database & Cache
+    API -->|Read/Write| DB
+    API -->|Cache| Redis
+    
+    %% Real-time Sync
+    WS1 <-->|Sync State & Emit Events| Redis
+    WS2 <-->|Sync State & Emit Events| Redis
+    
+    %% Internal Auth (Optional Route)
+    WS1 -.->|Verify Token| API
+    WS2 -.->|Verify Token| API
+
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef client fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef service fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
+    classDef db fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    
+    class Client client;
+    class API,WS1,WS2 service;
+    class DB,Redis db;
 ```
 
-## What's inside?
+---
 
-This Turborepo includes the following packages/apps:
+## 📦 Project Structure
 
-### Apps and Packages
+The codebase is organized into modular `apps` and `packages` to promote extreme reusability and fast isolated deployments.
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+### Apps (`/apps`)
+| Application | Description |
+| :--- | :--- |
+| **`frontend`** | Vite + React + Phaser web application. Handles the UI, rendering the 2D metaverse, and maintaining local state via Zustand. |
+| **`api`** | Express-based robust REST API handling user authentication, profile creation, settings, and persistent database interactions via Prisma. |
+| **`wserver`** | High-performance WebSocket Node.js server managing real-time player movements, chat, and spatial synchronization. |
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+### Packages (`/packages`)
+| Package | Description |
+| :--- | :--- |
+| **`types`** | `@myapp/types` - Shared TypeScript definitions so the API, WServer, and Frontend share the exact same payload interfaces. |
+| **`ui`** | Reusable React components and Tailwind configuration. |
+| **`jwt`** | `@shared/jwt` - Shared JWT authentication and validation logic. |
+| **`eslint-config`** | Shared ESLint configurations used throughout the monorepo. |
+| **`typescript-config`** | Shared base `tsconfig.json` setups. |
 
-### Utilities
+---
 
-This Turborepo has some additional tools already setup for you:
+## 🚀 Scalability & Performance Details
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+The metaverse architecture natively supports **horizontal scaling**:
 
-### Build
+1. **Stateless API:** The `apps/api` service is completely stateless and can scale to handle massive concurrent REST requests without sticky sessions tracking.
+2. **Distributed WebSocket Servers:** `apps/wserver` is designed using Socket.io/ws alongside `@valkey/valkey-glide` (a highly tuned Redis client). It uses the adapter pattern to distribute events via **Pub/Sub**. When a user moves on server instance `WS1`, the event is published to Valkey, ensuring clients connected to completely different nodes (e.g., `WS2`) receive the update instantly.
+3. **Database Optimization:** Prisma is used with proper connection pooling logic to interact with the PostgreSQL connection limits intelligently.
 
-To build all apps and packages, run the following command:
+---
 
-```
-cd my-turborepo
-pnpm build
-```
+## 🏃 Getting Started
 
-### Develop
+### Prerequisites
+Before you begin, ensure you have the following installed:
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- npm (v11+ recommended) or [pnpm](https://pnpm.io/)
+- A local or Dockerized **Valkey** (or Redis) server
+- A local or remote **PostgreSQL** database
 
-To develop all apps and packages, run the following command:
+### 1. Installation
 
-```
-cd my-turborepo
-pnpm dev
-```
+Clone the repository and install all dependencies from the root:
 
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-npx turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-npx turbo link
+```bash
+git clone https://github.com/your-org/metaverse.git
+cd metaverse
+npm install
 ```
 
-## Useful Links
+### 2. Environment Setup
 
-Learn more about the power of Turborepo:
+You need to configure the environment variables for each respective application.
 
-- [Tasks](https://turbo.build/repo/docs/core-concepts/monorepos/running-tasks)
-- [Caching](https://turbo.build/repo/docs/core-concepts/caching)
-- [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching)
-- [Filtering](https://turbo.build/repo/docs/core-concepts/monorepos/filtering)
-- [Configuration Options](https://turbo.build/repo/docs/reference/configuration)
-- [CLI Usage](https://turbo.build/repo/docs/reference/command-line-reference)
+Copy `.env.example` to `.env` in the following directories:
+- `apps/api/.env`
+- `apps/wserver/.env`
+- `apps/frontend/.env`
+
+*(Ensure your `DATABASE_URL` and `REDIS_URL` are set correctly matching your local infrastructure).*
+
+### 3. Database Migration
+
+Initialize your database schema by running the Prisma migrations:
+
+```bash
+cd apps/api
+npx prisma generate
+npx prisma migrate dev
+```
+
+### 4. Running the Development Server
+
+To boot up the entire stack concurrently (API, WebSocket Server, and Frontend) using Turborepo's pipeline:
+
+```bash
+# From the root directory:
+npm run dev
+```
+
+- **Frontend** will be running on `http://localhost:5173` (or Vite's default)
+- **API** will be running on your configured API port.
+- **WebSocket Server** will be listening on your configured WS port.
+
+---
+
+## 🛠 Complete Tech Stack
+
+- **Game Engine:** Phaser 3
+- **Frontend Framework:** React 19, Vite, Zustand
+- **Styling:** TailwindCSS, Lucide React
+- **Event / Real-Time:** WebSockets (`ws`, `socket.io-client`), Valkey / Redis
+- **Backend APIs:** Express.js, Prisma ORM, Zod Validation, JWT Auth
+- **Infrastructure / CLI:** Turborepo, TypeScript integration, Node.js
+
+---
+
+> Built with Turborepo and maintained by the engineering team.
