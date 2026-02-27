@@ -17,7 +17,7 @@ An advanced, highly-scalable 2D Real-Time Metaverse built with modern web techno
 - **Infinitely Scalable Architecture:** Built to scale horizontally using **Valkey** (a high-performance Redis alternative) for distributed Pub/Sub state synchronization.
 - **Robust Monorepo Design:** Efficiently managed by **Turborepo** with shared packages for Types, UI components, and JWT authentication across apps.
 - **Type-Safe End-to-End:** 100% TypeScript with strict linting and unified configurations.
-- **Modern Tech Stack:** Utilizes React 19, Vite, Tailwind CSS, Express, Prisma ORM, and Socket.io.
+- **Modern Tech Stack:** Utilizes React 19, Vite, Tailwind CSS, Express, and Socket.io.
 
 ---
 
@@ -40,7 +40,6 @@ graph TD
     end
 
     subgraph Data & State Layer
-        DB[(PostgreSQL<br/>via Prisma)]
         Redis[(Valkey / Redis<br/>Pub/Sub & Caching Layer)]
     end
 
@@ -53,26 +52,28 @@ graph TD
     LB -->|/ws/*| WS1
     LB -->|/ws/*| WS2
 
-    %% Database & Cache
-    API -->|Read/Write| DB
+    %% Cache
     API -->|Cache| Redis
     
     %% Real-time Sync
     WS1 <-->|Sync State & Emit Events| Redis
     WS2 <-->|Sync State & Emit Events| Redis
     
-    %% Internal Auth (Optional Route)
-    WS1 -.->|Verify Token| API
-    WS2 -.->|Verify Token| API
+    %% Internal Auth (Shared Secret)
+    WS1 -.->|Locally Verify JWT| Auth[Shared JWT Secret]
+    WS2 -.->|Locally Verify JWT| Auth
+    API -.->|Sign & Verify JWT| Auth
 
     classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px;
     classDef client fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
     classDef service fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
     classDef db fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    classDef auth fill:#fce4ec,stroke:#c2185b,stroke-width:2px;
     
     class Client client;
     class API,WS1,WS2 service;
-    class DB,Redis db;
+    class Redis db;
+    class Auth auth;
 ```
 
 ---
@@ -85,7 +86,7 @@ The codebase is organized into modular `apps` and `packages` to promote extreme 
 | Application | Description |
 | :--- | :--- |
 | **`frontend`** | Vite + React + Phaser web application. Handles the UI, rendering the 2D metaverse, and maintaining local state via Zustand. |
-| **`api`** | Express-based robust REST API handling user authentication, profile creation, settings, and persistent database interactions via Prisma. |
+| **`api`** | Express-based robust REST API currently handling user authentication, profile creation, and settings. |
 | **`wserver`** | High-performance WebSocket Node.js server managing real-time player movements, chat, and spatial synchronization. |
 
 ### Packages (`/packages`)
@@ -105,8 +106,6 @@ The metaverse architecture natively supports **horizontal scaling**:
 
 1. **Stateless API:** The `apps/api` service is completely stateless and can scale to handle massive concurrent REST requests without sticky sessions tracking.
 2. **Distributed WebSocket Servers:** `apps/wserver` is designed using Socket.io/ws alongside `@valkey/valkey-glide` (a highly tuned Redis client). It uses the adapter pattern to distribute events via **Pub/Sub**. When a user moves on server instance `WS1`, the event is published to Valkey, ensuring clients connected to completely different nodes (e.g., `WS2`) receive the update instantly.
-3. **Database Optimization:** Prisma is used with proper connection pooling logic to interact with the PostgreSQL connection limits intelligently.
-
 ---
 
 ## 🏃 Getting Started
@@ -116,7 +115,6 @@ Before you begin, ensure you have the following installed:
 - [Node.js](https://nodejs.org/) (v18 or higher)
 - npm (v11+ recommended) or [pnpm](https://pnpm.io/)
 - A local or Dockerized **Valkey** (or Redis) server
-- A local or remote **PostgreSQL** database
 
 ### 1. Installation
 
@@ -137,19 +135,9 @@ Copy `.env.example` to `.env` in the following directories:
 - `apps/wserver/.env`
 - `apps/frontend/.env`
 
-*(Ensure your `DATABASE_URL` and `REDIS_URL` are set correctly matching your local infrastructure).*
+*(Ensure your `REDIS_URL` and other required variables are set correctly matching your local infrastructure).*
 
-### 3. Database Migration
-
-Initialize your database schema by running the Prisma migrations:
-
-```bash
-cd apps/api
-npx prisma generate
-npx prisma migrate dev
-```
-
-### 4. Running the Development Server
+### 3. Running the Development Server
 
 To boot up the entire stack concurrently (API, WebSocket Server, and Frontend) using Turborepo's pipeline:
 
@@ -170,9 +158,9 @@ npm run dev
 - **Frontend Framework:** React 19, Vite, Zustand
 - **Styling:** TailwindCSS, Lucide React
 - **Event / Real-Time:** WebSockets (`ws`, `socket.io-client`), Valkey / Redis
-- **Backend APIs:** Express.js, Prisma ORM, Zod Validation, JWT Auth
+- **Backend APIs:** Express.js, Zod Validation, JWT Auth
 - **Infrastructure / CLI:** Turborepo, TypeScript integration, Node.js
 
 ---
 
-> Built with Turborepo and maintained by the engineering team.
+> Built with Turborepo and maintained by shiva.
