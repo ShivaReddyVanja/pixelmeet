@@ -3,13 +3,7 @@ import type { SocketConnectionData } from '@/types';
 import axios from 'axios';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
-
-const ArrowLeftIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="m12 19-7-7 7-7" />
-        <path d="M19 12H5" />
-    </svg>
-);
+import { ArrowLeft, Zap, Loader2 } from 'lucide-react';
 
 export default function JoinPage() {
     const [searchParams] = useSearchParams();
@@ -17,7 +11,7 @@ export default function JoinPage() {
 
     const [name, setName] = useState("");
     const [roomId, setRoomId] = useState(initialRoomId);
-    const [connectionData, setConnectionData] = useState<SocketConnectionData | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -28,10 +22,11 @@ export default function JoinPage() {
             return;
         }
 
+        setIsLoading(true);
+
         try {
             const response = await api.post("/join", { name, roomId });
             const data = response.data;
-            setConnectionData(data);
 
             localStorage.setItem("connectionInfo", JSON.stringify({
                 userId: data.userId,
@@ -49,73 +44,100 @@ export default function JoinPage() {
             } else {
                 console.error(e);
             }
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
-        <div className="bg-slate-900 text-white min-h-screen flex flex-col">
-            <header className="container mx-auto px-6 lg:px-8 py-4">
-                <Link to="/" className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-violet-500 bg-clip-text text-transparent">
-                    PixelMeet
+        <div className="bg-zinc-950 text-zinc-50 min-h-screen flex flex-col font-sans selection:bg-zinc-800 relative overflow-hidden">
+            {/* Background Effects */}
+            <div className="absolute inset-0 z-0 pointer-events-none">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#18181b_1px,transparent_1px),linear-gradient(to_bottom,#18181b_1px,transparent_1px)] bg-[size:4.5rem_4.5rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-20" />
+            </div>
+
+            <header className="container mx-auto px-6 lg:px-16 py-8 relative z-10">
+                <Link to="/" className="text-2xl font-black tracking-tighter uppercase text-white hover:text-zinc-400 transition-colors">
+                    PixelMeet.
                 </Link>
             </header>
 
-            <main className="flex-grow flex items-center justify-center p-4">
-                <div className="w-full max-w-md mx-auto bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-lg shadow-pink-500/10">
-                    <div className="text-center">
-                        <h1 className="text-3xl font-bold mb-2">Join a meeting</h1>
-                        <p className="text-slate-400 mb-8">Enter your name and the Room ID to connect.</p>
-                    </div>
+            <main className="flex-grow flex items-center justify-center p-6 relative z-10">
+                <div className="w-full max-w-md">
+                    <div className="bg-zinc-900/40 border border-zinc-800 rounded-[2.5rem] p-10 backdrop-blur-sm shadow-2xl relative overflow-hidden group">
+                        {/* Glow effect */}
+                        <div className="absolute -top-24 -right-24 w-48 h-48 bg-white/5 blur-[80px] rounded-full group-hover:bg-white/10 transition-colors" />
 
-                    <form onSubmit={handleFormSubmit}>
-                        <div className="mb-4">
-                            <label htmlFor="roomId" className="block text-sm font-medium text-slate-300 mb-2">
-                                Meeting Room ID
-                            </label>
-                            <input
-                                type="text"
-                                id="roomId"
-                                name="roomId"
-                                value={roomId}
-                                onChange={(e) => setRoomId(e.target.value)}
-                                required
-                                placeholder="e.g., abc-123-xyz"
-                                className="w-full px-4 py-3 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 transition duration-200"
-                            />
+                        <div className="text-center mb-10">
+                            <div className="inline-flex h-12 w-12 rounded-2xl bg-zinc-800 items-center justify-center mb-6 border border-zinc-700">
+                                <Zap className="w-6 h-6 text-white" />
+                            </div>
+                            <h1 className="text-4xl font-black tracking-tight mb-3">Join Room</h1>
+                            <p className="text-zinc-500 font-light text-xs uppercase tracking-widest">Enter details to join.</p>
                         </div>
 
-                        <div className="mb-6">
-                            <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-2">
-                                Your Name
-                            </label>
-                            <input
-                                type="text"
-                                id="name"
-                                name="name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                required
-                                placeholder="e.g., Alex Doe"
-                                className="w-full px-4 py-3 bg-slate-700 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 transition duration-200"
-                            />
+                        <form onSubmit={handleFormSubmit} className="space-y-6">
+                            <div>
+                                <label htmlFor="roomId" className="block text-[10px] font-mono text-zinc-600 uppercase tracking-[0.2em] mb-3 ml-1">
+                                    Room ID
+                                </label>
+                                <input
+                                    type="text"
+                                    id="roomId"
+                                    name="roomId"
+                                    value={roomId}
+                                    onChange={(e) => setRoomId(e.target.value)}
+                                    required
+                                    placeholder="e.g., room-123"
+                                    className="w-full px-5 py-4 bg-zinc-950 text-white border border-zinc-800 rounded-2xl focus:outline-none focus:border-white transition-colors duration-300 placeholder:text-zinc-700"
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="name" className="block text-[10px] font-mono text-zinc-600 uppercase tracking-[0.2em] mb-3 ml-1">
+                                    Your Name
+                                </label>
+                                <input
+                                    type="text"
+                                    id="name"
+                                    name="name"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    required
+                                    placeholder="e.g., Alex Doe"
+                                    className="w-full px-5 py-4 bg-zinc-950 text-white border border-zinc-800 rounded-2xl focus:outline-none focus:border-white transition-colors duration-300 placeholder:text-zinc-700"
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="w-full bg-white text-zinc-950 font-bold py-4 px-6 rounded-2xl hover:bg-zinc-200 transition-all duration-300 transform active:scale-[0.98] shadow-[0_0_20px_rgba(255,255,255,0.1)] mt-4 flex items-center justify-center gap-2"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <span>Connecting...</span>
+                                    </>
+                                ) : (
+                                    "Join Room"
+                                )}
+                            </button>
+                        </form>
+
+                        <div className="text-center mt-10">
+                            <Link to="/" className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-600 hover:text-white transition-colors inline-flex items-center gap-2">
+                                <ArrowLeft className="h-3 w-3" />
+                                Back to Home
+                            </Link>
                         </div>
-
-                        <button
-                            type="submit"
-                            className="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 duration-300"
-                        >
-                            Join Meet
-                        </button>
-                    </form>
-
-                    <div className="text-center mt-6">
-                        <Link to="/" className="text-sm text-slate-400 hover:text-pink-400 transition duration-200 inline-flex items-center gap-2">
-                            <ArrowLeftIcon className="h-4 w-4" />
-                            Back to Home
-                        </Link>
                     </div>
                 </div>
             </main>
+
+            <footer className="py-8 text-center relative z-10">
+                <p className="text-[10px] font-mono text-zinc-800 uppercase tracking-[0.3em]">© 2026 Engine Unit</p>
+            </footer>
         </div>
     );
 }
